@@ -9,6 +9,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const userChekRegister = (req, res, next) => {
+   
+    if (req.body.username.length === 0){
+        res.status(401);
+        next(new Error("caratteri non consetiti nell username"));
+    }else{
+        const dati = readFileSync();
+        let userChekRegister = dati.find((utente) => req.body.username === utente.username);
+        
+        if (userChekRegister) {
+            res.status(401);
+            next(new Error("Username gia usato"));
+        
+           }else{
+           next();
+           }
+    }
+};
+
+
 const chekFindPost = (req, res, next) => {
     const utenteQ = req.query.username;
     let dbPostUtenti = readFileSyncPost();
@@ -61,8 +81,8 @@ const checkLogin = (req, res, next) => {
 
     if (foundUsername === undefined) {
         res.status(401);
-        next(new Error("Username non valido"));
-    } else if (foundUsername.password === utenteQ.password) {
+        next(new Error("utente non registrato"));
+    } else if (foundUsername.username === utenteQ.username && foundUsername.password === utenteQ.password) {
      //   req.token = getToken(utenteQ.username);
         next();
     } else {
@@ -72,30 +92,21 @@ const checkLogin = (req, res, next) => {
 };
 
 app.post("/login", checkLogin, (req, res, next) => {
-    //const dati = readFileSync();
-//res.status(200).send(req.token);
-    res.status(200).send(dati);
+    //res.status(200).send(req.token);
+    res.status(200).send("Login Succes");
 
 });
 
 
-app.post("/register", (req, res, next) => {
+app.post("/register",userChekRegister, (req, res, next) => {
     const dati = readFileSync();
-    let arrayVuoto = [];
-    const utenteTmp = req.body;
-    let userName = req.body.username;
 
-    for (let utente of dati) {
-        arrayVuoto.push(utente);
-        if (userName === utente.username) {
-            res.status(401);
-            next(new Error("utente gia Registrato"));
-        };
-    };
-    utenteTmp.password = encrypt(utenteTmp.password, 3);
-    arrayVuoto.push(utenteTmp);
-    writeFileSync(arrayVuoto);
-    res.status(200).send(utenteTmp);
+        req.body.password = encrypt(req.body.password, 3);
+        dati.push(req.body);
+        writeFileSync(dati);
+        res.status(200).send(req.body);
+    
+
 });
 
 app.get("/post", (req, res, next) => {
@@ -122,12 +133,14 @@ app.post("/post/addPost/", (req, res, next) => {
     if (!chekRegister) {
         res.status(401);
         next(new Error("Utente non Registrato"));
+    }else{
+        utenteTmp.idPost = dati.length + 1;
+        dati.push(utenteTmp);
+        writeFileSyncPost(dati);
+        res.status(200).send("Post Added");
     };
 
-    utenteTmp.idPost = dati.length + 1;
-    dati.push(utenteTmp);
-    writeFileSyncPost(dati);
-    res.status(200).send("Post Added");
+   
 });
 
 app.get("/post/findPost/", chekFindPost, (req, res, next) => {
@@ -145,19 +158,16 @@ app.get("/post/findPost/", chekFindPost, (req, res, next) => {
 
 app.delete("/post/deletePost/", chekFindPost, (req, res, next) => {
     const dati = readFileSyncPost();
-    let utenteTmp = req.query.username;
 
-    for (let utente of dati) {
-        if (utente.idPostUtente === utenteTmp && req.query.idPost !== undefined) {
-            dati.splice(utente.indexOf, 1);
-            break;
-        } else {
+    let tmp = dati.findIndex((postFind)=>req.query.idPost == postFind.idPost && req.query.username == postFind.idPostUtente)
+            if(tmp != -1){
+            dati.splice(tmp, 1);
+            writeFileSyncPost(dati);
+            res.status(200).send(dati);
+        } else{
             res.status(400);
             next(new Error("Impossibile cancellare post"));
         }
-    }
-    writeFileSyncPost(dati);
-    res.status(200).send(dati);
 });
 
 app.get("/post/likePost/", (req, res, next) => {

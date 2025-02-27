@@ -4,10 +4,35 @@ import fs from "fs";
 import cors from "cors"
 import { DateTime } from "luxon"
 import { getToken, verifyToken } from "./jwt.js";
+import pg from "pg"
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+
+
+
+const client = new pg.Client({
+	user: 'postgres',
+	password: 'usergesan',
+	host: '192.168.125.187',
+	port: '5432',
+	database: 'social',
+});
+client.connect().then(()=> {
+    console.log('stato: connesso')
+}).catch((err)=>{
+    console.log('errore nella connessione');
+    
+})
+
+
+			
+        
+
+	//	client.query("INSERT INTO bird.utente (nome,eta,codice_fiscale,id,dipendente_id)VALUES ('figlio',20,'coduiced',34,21)");
+        	
 
 const userChekRegister = (req, res, next) => {
    
@@ -54,7 +79,7 @@ function encrypt(msg, key) {
 };
 
 function readFileSync() {
-    const datiRaw = fs.readFileSync("./utenti.json").toString("utf8");
+   const datiRaw = fs.readFileSync("./utenti.json").toString("utf8");
     const dati = JSON.parse(datiRaw);
     return dati;
 };
@@ -66,7 +91,12 @@ function readFileSyncPost() {
 };
 
 function writeFileSync(message) {
-    fs.writeFileSync("./utenti.json", JSON.stringify(message, undefined, 4));
+   // fs.writeFileSync("./utenti.json", JSON.stringify(message, undefined, 4));
+  client.query("INSERT INTO bird.utente (username, password, nome, cognome) VALUES (?, ?, ?, ?)",[message.username,message.password,message.nome,message.cognome],(err,result)=>{
+console.log(err);
+
+  });
+  
 };
 
 function writeFileSyncPost(message) {
